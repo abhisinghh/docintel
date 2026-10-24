@@ -1,0 +1,30 @@
+# Recommended open-source stack for bilingual (English + Hindi) printed documents.
+#   OCR + layout + grounding : dots.ocr (1.7B, MIT) served by vLLM — best open model on Devanagari in
+#                               independent tests (GlotOCR Acc@5 90.2) and emits layout JSON with bboxes.
+#   Agent / schema extraction : Qwen3-VL-8B-Instruct served by vLLM (OpenAI-compatible), or swap in Anthropic.
+#   Layout regions             : DocLayout-YOLO adds table/figure boxes on scans where the VLM misses them.
+#
+#   vllm serve rednote-hilab/dots.ocr --port 8001 --trust-remote-code
+#   vllm serve Qwen/Qwen3-VL-8B-Instruct --port 8000 --max-model-len 32768
+data_dir: ./data
+render_dpi: 200
+vlm:
+  enabled: true
+  provider: openai            # OpenAI-compatible on-prem server (vLLM)
+  family: dots_ocr
+  model: rednote-hilab/dots.ocr
+  base_url: http://localhost:8001/v1
+  api_key: EMPTY
+llm:
+  provider: openai            # same server style; swap base_url/api_key for a hosted API
+  model: Qwen/Qwen3-VL-8B-Instruct
+  base_url: http://localhost:8000/v1
+  api_key: EMPTY
+ocr:
+  engine: tesseract           # fallback only
+  languages: [eng, hin]
+layout:
+  engine: doclayout_yolo
+  conf_threshold: 0.25
+agent_max_steps: 12
+verify_extractions: true

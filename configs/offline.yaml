@@ -1,0 +1,14 @@
+# Fully offline / CPU: PDF text layer + Tesseract + heuristics. No LLM, no VLM.
+# Good for born-digital PDFs and smoke tests; weak on scans, handwriting, charts.
+data_dir: ./data
+render_dpi: 150
+llm:
+  provider: none
+vlm:
+  enabled: false
+ocr:
+  engine: tesseract
+  languages: [eng, hin]      # install tesseract-ocr-hin for Devanagari
+layout:
+  engine: heuristic
+verify_extractions: true

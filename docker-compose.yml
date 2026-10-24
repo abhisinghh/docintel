@@ -1,0 +1,34 @@
+services:
+  docintel:
+    build: .
+    ports: ["8080:8080"]
+    volumes: ["./data:/data", "./configs:/app/configs"]
+    environment:
+      DOCINTEL_CONFIG: /app/configs/${DOCINTEL_PROFILE:-offline}.yaml
+      DOCINTEL_VLM_API_KEY: ${DOCINTEL_VLM_API_KEY:-EMPTY}
+      DOCINTEL_LLM_API_KEY: ${DOCINTEL_LLM_API_KEY:-EMPTY}
+    depends_on: []
+
+  # --- optional GPU services for the open-source stack (docker compose --profile gpu up) ---------
+  dots-ocr:
+    profiles: ["gpu"]
+    image: vllm/vllm-openai:latest
+    command: >
+      --model rednote-hilab/dots.ocr --trust-remote-code --port 8001
+      --max-model-len 24000 --gpu-memory-utilization 0.45
+    ports: ["8001:8001"]
+    volumes: ["hf-cache:/root/.cache/huggingface"]
+    deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }
+
+  qwen3-vl:
+    profiles: ["gpu"]
+    image: vllm/vllm-openai:latest
+    command: >
+      --model Qwen/Qwen3-VL-8B-Instruct --port 8000 --max-model-len 32768
+      --gpu-memory-utilization 0.45 --limit-mm-per-prompt image=4
+    ports: ["8000:8000"]
+    volumes: ["hf-cache:/root/.cache/huggingface"]
+    deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }
+
+volumes:
+  hf-cache: {}

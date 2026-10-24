@@ -1,0 +1,21 @@
+# Fully on-prem, no inference server: weights are loaded in-process with HF transformers.
+# Works on one GPU (or CPU, slowly). Good for air-gapped deployments or quick experiments.
+#   pip install -e ".[vlm]"      (torch, transformers, qwen-vl-utils)
+data_dir: ./data
+render_dpi: 200
+vlm:
+  enabled: true
+  provider: transformers
+  family: generic                 # or dots_ocr with model rednote-hilab/dots.ocr
+  model: Qwen/Qwen3-VL-4B-Instruct
+  device: auto                    # "auto" | "cuda:0" | "cpu"
+llm:
+  provider: transformers          # reuse the same local model for the agent + extraction + open-IE
+  model: Qwen/Qwen3-VL-4B-Instruct
+  device: auto
+ocr:
+  engine: tesseract
+  languages: [eng, hin]
+layout:
+  engine: doclayout_yolo
+verify_extractions: true

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>docintel · grounded document viewer</title>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;--fg:#e6e8ee;--muted:#8b93a7;--accent:#5b9cff;
+        --text:#5b9cff;--title:#ffb020;--section_header:#ffd166;--list_item:#7fd1ae;--table:#f06292;--figure:#b388ff;
+        --chart:#4dd0e1;--map:#26c6da;--infographic:#80deea;--form_field:#aed581;--caption:#90a4ae;--handwriting:#ff8a65;
+        --formula:#ce93d8;--page_header:#546e7a;--page_footer:#546e7a;--page_number:#546e7a;--footnote:#78909c;--unknown:#999}
+  *{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg);height:100vh;display:grid;grid-template-columns:280px 1fr 420px;grid-template-rows:48px 1fr}
+  header{grid-column:1/4;display:flex;align-items:center;gap:16px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+  header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.3px}header .status{color:var(--muted);font-size:12px;margin-left:auto}
+  aside,main,section.right{overflow:auto}aside{background:var(--panel);border-right:1px solid var(--line);padding:12px}
+  section.right{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column}
+  main{position:relative;background:#0b0d11;display:flex;flex-direction:column}
+  .toolbar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel2);font-size:12px;flex-wrap:wrap}
+  .viewer{flex:1;overflow:auto;padding:16px;display:flex;justify-content:center;align-items:flex-start}
+  .page{position:relative;box-shadow:0 0 0 1px var(--line),0 12px 40px #0008;background:#fff}
+  .page img{display:block;width:100%;height:auto}.page svg{position:absolute;inset:0;width:100%;height:100%}
+  .page svg rect{fill:transparent;stroke-width:1.5;cursor:pointer;transition:fill .12s}
+  .page svg rect:hover{fill:rgba(91,156,255,.18)}.page svg rect.active{fill:rgba(255,176,32,.28);stroke-width:2.5}
+  .page svg rect.word{stroke-dasharray:3 2;stroke:#ff3d71;fill:rgba(255,61,113,.25)}
+  button,select,input[type=text]{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button:disabled{opacity:.5;cursor:default}
+  textarea{width:100%;min-height:120px;background:#0b0d11;color:var(--fg);border:1px solid var(--line);border-radius:6px;font:12px/1.4 ui-monospace,Menlo,monospace;padding:8px}
+  .doc{padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent;margin-bottom:6px}
+  .doc:hover{background:var(--panel2)}.doc.active{border-color:var(--accent);background:var(--panel2)}
+  .doc .name{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.doc .meta{color:var(--muted);font-size:11px}
+  .tabs{display:flex;border-bottom:1px solid var(--line);background:var(--panel2)}.tabs div{padding:9px 12px;font-size:12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent}
+  .tabs div.active{color:var(--fg);border-color:var(--accent)}.tab{display:none;padding:12px;overflow:auto;flex:1}.tab.active{display:block}
+  .chunk{padding:8px 10px;border-left:3px solid var(--muted);margin-bottom:8px;background:var(--panel2);border-radius:0 6px 6px 0;cursor:pointer;font-size:12.5px}
+  .chunk.active{outline:1px solid var(--accent)}.chunk .t{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:flex;gap:8px}
+  .chunk pre{white-space:pre-wrap;margin:4px 0 0;font:12px/1.4 inherit}.badge{display:inline-block;padding:0 6px;border-radius:10px;background:#2a2f3a;font-size:10px}
+  table.grid{border-collapse:collapse;font-size:12px;margin:6px 0}table.grid td,table.grid th{border:1px solid var(--line);padding:3px 6px}table.grid th{background:var(--panel2)}
+  .field{padding:8px 10px;background:var(--panel2);border-radius:6px;margin-bottom:6px;cursor:pointer;font-size:12.5px}.field b{color:var(--section_header)}
+  .field .v{font-family:ui-monospace,monospace}.ok{color:#7fd1ae}.warn{color:#ff8a65}
+  .legend{display:flex;flex-wrap:wrap;gap:6px}.legend span{font-size:10px;padding:1px 6px;border-radius:8px;border:1px solid}
+  .drop{border:1px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted);font-size:12px;margin-bottom:12px}
+  .drop.over{border-color:var(--accent);color:var(--fg)}pre.json{font:11px/1.4 ui-monospace,monospace;white-space:pre-wrap;color:#cfd3dc}
+  .md{font-size:13px;white-space:pre-wrap}.muted{color:var(--muted)}.row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .search{width:100%;margin-bottom:8px}
+</style>
+</head>
+<body>
+<header><h1>docintel</h1><span class="muted">agentic document OCR · layout · grounding · schema extraction · RAG/KG export</span><span class="status" id="health"></span></header>
+
+<aside>
+  <div class="drop" id="drop">Drop a PDF / image / DOCX / PPTX here<br>or <label style="color:var(--accent);cursor:pointer"><input type="file" id="file" hidden>browse</label></div>
+  <div style="font-size:12px;margin-bottom:10px">
+    <div class="muted" style="margin-bottom:4px">On upload</div>
+    <label style="display:block"><input type="radio" name="mode" value="parse" checked> Parse only (layout, OCR, grounding, RAG export)</label>
+    <label style="display:block"><input type="radio" name="mode" value="schema"> Extract fields with my schema</label>
+    <label style="display:block"><input type="radio" name="mode" value="auto"> Auto-discover fields (propose a schema, then extract)</label>
+    <textarea id="uploadSchema" style="display:none;margin-top:6px;min-height:90px" placeholder='{"invoice_number":"The invoice ID","total":"Grand total amount"}  or a JSON Schema'></textarea>
+  </div>
+  <div id="docs"></div>
+</aside>
+
+<main>
+  <div class="toolbar">
+    <button id="prev">◀</button><span id="pageLabel">–</span><button id="next">▶</button>
+    <label>zoom <input type="range" id="zoom" min="40" max="200" value="100"></label>
+    <label><input type="checkbox" id="showBoxes" checked> boxes</label>
+    <label><input type="checkbox" id="showWords"> words</label>
+    <span class="legend" id="legend"></span>
+    <button id="export" style="margin-left:auto">⬇ export (RAG/KG)</button>
+  </div>
+  <div class="viewer"><div class="page" id="page" style="width:800px"><img id="pageImg" alt=""><svg id="overlay"></svg></div></div>
+</main>
+
+<section class="right">
+  <div class="tabs">
+    <div data-tab="chunks" class="active">Chunks</div><div data-tab="extract">Extract</div><div data-tab="tables">Tables & charts</div>
+    <div data-tab="md">Markdown</div><div data-tab="graph">Graph</div><div data-tab="agent">Agent</div><div data-tab="json">JSON</div>
+  </div>
+  <div class="tab active" id="tab-chunks"><input type="text" class="search" id="search" placeholder="search inside document (grounded)"><div id="chunks"></div></div>
+  <div class="tab" id="tab-extract">
+    <p class="muted" style="margin-top:0">Paste a JSON Schema or a flat <code>{field: description}</code> object. Each result is grounded to a page region and independently verified.</p>
+    <textarea id="schema" style="min-height:200px">{
+  "type": "object",
+  "properties": {
+    "invoice_number": {"type": "string", "description": "Invoice ID"},
+    "invoice_date": {"type": "string", "format": "date", "description": "Date issued"},
+    "gstin": {"type": "string", "description": "GST identification number"},
+    "total_amount": {"type": "number", "description": "Grand total amount"},
+    "line_items": {"type": "array", "items": {"type": "object", "properties": {
+      "description": {"type": "string"}, "quantity": {"type": "integer", "description": "Qty"},
+      "unit_price": {"type": "number"}, "amount": {"type": "number"}}}}
+  }
+}</textarea>
+    <div class="row"><button class="primary" id="runExtract">Extract with this schema</button><button id="suggestSchema" title="Propose a schema from the document's labels, tables and (if configured) an LLM">Suggest schema from document</button><span class="muted" id="extractStatus"></span></div>
+    <div id="fields"></div><pre class="json" id="extractJson"></pre>
+  </div>
+  <div class="tab" id="tab-tables"></div>
+  <div class="tab" id="tab-md"><div class="md" id="md"></div></div>
+  <div class="tab" id="tab-graph"></div>
+  <div class="tab" id="tab-agent"></div>
+  <div class="tab" id="tab-json"><pre class="json" id="json"></pre></div>
+</section>
+
+<script src="/ui/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Hosted parser: LandingAI Agentic Document Extraction does page parsing + grounding;
+# an LLM (hosted or on-prem) does the agent loop, schema extraction and open-IE.
+#   export DOCINTEL_VLM_API_KEY=<landingai key>   DOCINTEL_LLM_API_KEY=<anthropic key>
+data_dir: ./data
+render_dpi: 200
+vlm:
+  enabled: true
+  provider: landingai
+  base_url: https://api.va.landing.ai
+llm:
+  provider: anthropic
+  model: claude-sonnet-5-5
+ocr:
+  engine: tesseract
+  languages: [eng, hin]
+layout:
+  engine: heuristic
+verify_extractions: true
